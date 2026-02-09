@@ -5,7 +5,7 @@ const { getUniTVL } = require('../helper/unknownTokens');
 const v2graph = getChainTvl({ ethereum: 'A3Np3RQbaBA6oKJgiwDJeo5T3zrYfGHPWFYayMwtNDum' })
 
 const config = {
-  // ethereum: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', // uses subgraph
+  ethereum: '0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f', // uses subgraph
   base: '0x8909dc15e40173ff4699343b6eb8132c65e18ec6',
   optimism: '0x0c3c1c532F1e39EdF36BE9Fe0bE1410313E074Bf',
   arbitrum: '0xf1D7CC64Fb4452F05c498126312eBE29f30Fbcf9',
@@ -32,15 +32,13 @@ async function tvl(api) {
     )
     api.addUSDValue(closest.value)
   } catch {
-    if (api.chain === 'ethereum') return
+    if (api.chain === 'ethereum') return v2graph(api)
     const factory = config[api.chain]
     return getUniTVL({ factory, useDefaultCoreAssets: true, permitFailure: true })(api)
   }
 }
 
 module.exports = { misrepresentedTokens: true, isHeavyProtocol: true }
-
-module.exports.ethereum = { tvl }
 
 Object.keys(config).forEach(chain => {
   module.exports[chain] = { tvl }
