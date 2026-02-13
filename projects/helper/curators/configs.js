@@ -29,6 +29,7 @@ const ABI = {
     getProxyListLength: 'uint256:getProxyListLength',
     proxyList: 'function proxyList(uint256) view returns (address)',
     creator: 'address:creator',
+    governorAdmin: 'address:governorAdmin',
   },
   silo: {
     CreateSiloVaultEvent: 'event CreateSiloVault(address indexed vault, address incentivesController, address idleVault)',
@@ -302,7 +303,7 @@ const VesuConfigs = {
   poolFactory: '0x03760f903a37948f97302736f89ce30290e45f441559325026842b7a6fb388c0',
 }
 
-module.exports = { 
+module.exports = {
   ABI,
   MorphoConfigs,
   EulerConfigs,

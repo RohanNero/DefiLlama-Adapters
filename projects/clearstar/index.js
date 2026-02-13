@@ -52,6 +52,13 @@ const configs = {
         '0x65A067b5955F11F6202F14C3b9Cd64830C4170fB' // HypurrFi / Euler HyperEVM vaults
       ],
     },
+    flare: {
+      morpho: [
+        '0xE8dd6A1e13244A27bDaa19CcBf33013647C675d1', // Core USDT0 Vault on Mystic
+        '0x1aEadA3C251215f1294720B80FcB3D1D005F3585', // Core wFLR Vault on Mystic
+        '0x53184aDaBF312b490BF1EbcFdC896FEfF6019a14', // Core FXRP Vault on Mystic
+      ],
+    },
     starknet: {
       vesuV2: [
         '0x1bc5de51365ed7fbb11ebc81cef9fd66b70050ec10fd898f0c4698765bf5803' // Clearstar USDC Reactor
@@ -62,10 +69,12 @@ const configs = {
 
 const exportObj = getCuratorExport(configs)
 
-// Flare vault uses non-standard getTotalAssets() instead of totalAssets()
-const FLARE_VAULT = '0x373D7d201C8134D4a2f7b5c63560da217e3dEA28' // Upshift FXRP
+const FLARE_VAULT = '0x373D7d201C8134D4a2f7b5c63560da217e3dEA28' // Upshift FXRP Vault
+const existingFlareTvl = exportObj.flare?.tvl
 exportObj.flare = {
   tvl: async (api) => {
+    if (existingFlareTvl) await existingFlareTvl(api)
+
     const asset = await api.call({ abi: 'address:asset', target: FLARE_VAULT })
     const totalAssets = await api.call({ abi: 'uint256:getTotalAssets', target: FLARE_VAULT })
     api.add(asset, totalAssets)
@@ -74,7 +83,7 @@ exportObj.flare = {
 
 module.exports = {
   ...exportObj,
-  
+
   timetravel: false, // starknet doesn't support historical queries
   hallmarks: [
     ['2026-02-10', "Start tracking Vesu V2 vaults on Starknet"],

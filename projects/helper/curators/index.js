@@ -7,7 +7,6 @@ const kvaultIdl = require('../../gauntlet/kvault-idl.json')
 const { Program, BN } = require("@project-serum/anchor")
 const { PublicKey } = require("@solana/web3.js")
 
-
 async function kaminoLendVaultTvl(api, adminAddress) {
   const KAMINO_LEND_VAULT_LAYER_PROGRAM_ID = new PublicKey('KvauGMspG5k6rtzrqqn7WNn3oZdyKqLKwK2XWQ8FLjd')
 
@@ -109,7 +108,11 @@ async function getMorphoVaults(api, owners) {
 
 async function getEulerVaults(api, owners) {
   let allVaults = []
-  for (const factory of EulerConfigs[api.chain].vaultFactories) {
+  const allProxyAddresses = []
+  const chainConfig = EulerConfigs[api.chain]
+  if (!chainConfig?.vaultFactories?.length) return []
+
+  for (const factory of chainConfig.vaultFactories) {
     const getProxyListLength = await api.call({
       abi: ABI.euler.getProxyListLength,
       target: factory,
@@ -129,10 +132,12 @@ async function getEulerVaults(api, owners) {
           }
         }),
       })
+      allProxyAddresses.push(...proxyAddresses)
       const proxyCreators = await api.multiCall({
         abi: ABI.euler.creator,
         calls: proxyAddresses,
       });
+
       for (let i = 0; i < proxyAddresses.length; i++) {
         if (isOwner(proxyCreators[i], owners)) {
           allVaults.push(proxyAddresses[i])
@@ -140,6 +145,21 @@ async function getEulerVaults(api, owners) {
       }
     }
   }
+
+  // Fallback: if no vaults matched by creator, try governorAdmin
+  if (allVaults.length === 0 && allProxyAddresses.length > 0) {
+    const govAdmins = await api.multiCall({
+      abi: ABI.euler.governorAdmin,
+      calls: allProxyAddresses,
+      permitFailure: true,
+    })
+    for (let i = 0; i < allProxyAddresses.length; i++) {
+      if (govAdmins[i] && isOwner(govAdmins[i], owners)) {
+        allVaults.push(allProxyAddresses[i])
+      }
+    }
+  }
+
   return allVaults
 }
 
