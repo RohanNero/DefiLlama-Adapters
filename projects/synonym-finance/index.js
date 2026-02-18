@@ -1,79 +1,68 @@
 const sdk = require("@defillama/sdk");
-const bytes32ToAddress = (bytes32Address) => "0x" + bytes32Address.substr(-40);
+const { sumTokens2 } = require('../helper/unwrapLPs')
+const bytes32ToAddress = (b32) => "0x" + b32.substr(-40);
 
 const hub = '0x1e3f1f1cA8C62aABCB3B78D87223E988Dfa3780E'
-async function tvl({timestamp, chain}) {
-  const api = new sdk.ChainApi({ timestamp, chain: 'arbitrum' })
-  const { tokens, tokenMappings } = await getTokenInfos(api, chain)
-  const bals = await api.multiCall({ abi: 'erc20:balanceOf', calls: tokens.map(token => ({ target: token, params: hub })) })
-  api.add(tokenMappings, bals, { skipChain: true })
-  return api.getBalances()
+const ZERO_BYTES32 = '0x' + '0'.repeat(64)
+
+const wormholeChainIds = {
+  arbitrum: 23,
+  ethereum: 2,
+  optimism: 24,
+  base: 30,
+  scroll: 34,
 }
 
-async function borrowed({timestamp, chain }) {
-  const api = new sdk.ChainApi({ timestamp, chain: 'arbitrum' })
-  const { tokens, tokenMappings } = await getTokenInfos(api, chain)
-  const bals = (await api.multiCall({ abi: "function getGlobalAmounts(address assetAddress) view returns ((uint256 deposited, uint256 borrowed))", calls: tokens, target: hub })).map(i => i.borrowed)
-  api.add(tokenMappings, bals, { skipChain: true })
-  return api.getBalances()
+const spokes = {
+  ethereum: '0xd367051613979d1ec894233df9ede31591d0e5ff',
+  optimism: '0x93f5c828553968c659db847d5ccea61836efd72d',
+  base: '0x76e766336068b0f699d24002c368a4891a4dbcf3',
+  scroll: '0xf5b2b5f495756c5486acf73222e7400c7a0e28a6',
 }
 
-const chains = [
-    'arbitrum',
-    'ethereum',
-    'optimism',
-    'base',
-    'scroll',
-]
-
-chains.forEach(chain => {
-  module.exports[chain] = {
-    tvl,
-    borrowed
-  }
-})
-
-async function getTokenInfos(api, requestedChain) {
-  const registry = await api.call({ abi: 'address:getAssetRegistry', target: hub })
-  const wormholeTunnel = await api.call({ abi: 'address:getWormholeTunnel', target: hub })
-  const tokenBridge = await api.call({ abi: 'address:tokenBridge', target: wormholeTunnel })
-  const assets = await api.call({ abi: 'address[]:getRegisteredAssets', target: registry })
-  const isBridged = await api.multiCall({ abi: 'function isWrappedAsset(address) view returns (bool)', calls: assets, target: tokenBridge })
-  const arbiAssets = []
-  const bridgedAssets = []
-  assets.forEach((asset, i) => {
-    if (isBridged[i])
-      bridgedAssets.push(asset)
-    else
-      arbiAssets.push(asset)
+async function resolveChainTokens(arbApi, wormholeId) {
+  const registry = await arbApi.call({ abi: 'address:getAssetRegistry', target: hub })
+  const assetIds = await arbApi.call({ abi: 'function getRegisteredAssets() view returns (bytes32[])', target: registry })
+  const addresses = await arbApi.multiCall({
+    abi: 'function getAssetAddress(bytes32 _id, uint16 _chainId) view returns (bytes32)',
+    calls: assetIds.map(id => ({ params: [id, wormholeId] })),
+    target: registry,
+    permitFailure: true,
   })
-
-  if (requestedChain === 'arbitrum') {
-    return { tokens: arbiAssets, tokenMappings: arbiAssets.map(asset => 'arbitrum:' + asset) }
-  }
-
-  const natives = await api.multiCall({ abi: 'function nativeContract() view returns (bytes32)', calls: bridgedAssets })
-  const chainId = await api.multiCall({ abi: 'function chainId() view returns (uint16)', calls: bridgedAssets })
-
   const tokens = []
-  const tokenMappings = []
-
-  bridgedAssets.forEach((asset, i) => {
-    let chain;
-    switch (chainId[i]) {
-      case '2': chain = 'ethereum'; break;
-      case '24': chain = 'optimism'; break;
-      case '30': chain = 'base'; break;
-      case '34': chain = 'scroll'; break;
-      default: console.log('Unsupported chain ' + chainId[i] + bytes32ToAddress(natives[i])); return;
-    }
-
-    if (chain === requestedChain) {
-      tokens.push(asset)
-      tokenMappings.push(chain + ':' + bytes32ToAddress(natives[i]))
+  const filteredIds = []
+  assetIds.forEach((id, i) => {
+    const addr = addresses[i]
+    if (addr && addr !== ZERO_BYTES32) {
+      tokens.push(bytes32ToAddress(addr))
+      filteredIds.push(id)
     }
   })
+  return { tokens, assetIds: filteredIds }
+}
 
-  return { tokens, tokenMappings }
+async function tvl(api) {
+  const chain = api.chain
+  const isArbitrum = chain === 'arbitrum'
+  const arbApi = isArbitrum ? api : new sdk.ChainApi({ chain: 'arbitrum', timestamp: api.timestamp })
+  const { tokens } = await resolveChainTokens(arbApi, wormholeChainIds[chain])
+  return sumTokens2({ api, tokens, owner: isArbitrum ? hub : spokes[chain] })
+}
 
+async function borrowed(api) {
+  const { tokens, assetIds } = await resolveChainTokens(api, wormholeChainIds.arbitrum)
+  const bals = (await api.multiCall({
+    abi: "function getGlobalAmounts(bytes32 assetId) view returns ((uint256 deposited, uint256 borrowed))",
+    calls: assetIds,
+    target: hub,
+  })).map(i => i.borrowed)
+  api.add(tokens, bals)
+}
+
+module.exports = {
+  arbitrum: { tvl, borrowed },
+  ethereum: { tvl },
+  optimism: { tvl },
+  base: { tvl },
+  scroll: { tvl },
 }
