@@ -10,6 +10,7 @@ async function tvl(ts) {
 
 module.exports = {
   timetravel: false,
+  deadFrom: "2024-03-25", // Last reported data before endpoint went down
   misrepresentedTokens: true,
   sui: {
     tvl,
