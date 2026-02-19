@@ -43,6 +43,7 @@ async function tvl(api) {
 
 module.exports = {
   timetravel: false,
+  deadFrom: "2025-06-09", // Last reported data before adapter broke, the team has pivoted to issuing debit cards.
   methodology: "The TVL is calculated by summing the value of all assets that are in the wallets deployed by the DeFiBasket contract.",
   polygon: {
     tvl
