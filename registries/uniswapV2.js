@@ -2841,6 +2841,10 @@ const uniV2Configs = {
   'capybara-v2': {
     klaytn: '0xE4296d6161c8a1554a18dba79C0f825cE23bAE42',
   },
+  'sunswap-v2': {
+    _options: { queryBatched: 10 },
+    tron: { factory: 'TKWJdrQkqHisa1X8HUdHEfREvTzw4pMAaY', useDefaultCoreAssets: true}
+  },
 }
 
 module.exports = buildProtocolExports(uniV2Configs, uniV2ExportFn)
