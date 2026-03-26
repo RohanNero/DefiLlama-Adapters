@@ -1,39 +1,17 @@
-const { post } = require('../helper/http')
+const { ApiPromise, WsProvider } = require("@polkadot/api");
 
-const TREASURY_ADDRESS = "5HZAAREPzwBc4EPWWeTHA2WRcJoCgy4UBk8mwYFWR5BTCNcT";
-
-const TAO_STATS_SUBQUERY = "https://api.subquery.network/sq/TaoStats/bittensor-indexer";
-
-const taoQuery = async () => {
-  const query = `{
-        query{
-            account(id: "${TREASURY_ADDRESS}"){
-                id
-                nodeId
-                balanceTotal
-                balanceStaked
-                balanceFree
-                address
-            }
-        }
-    }`;
-
-  const variables = {};
-
-  return post(TAO_STATS_SUBQUERY, {
-    query,
-    variables,
-  });
-};
+const TREASURY_ADDRESS = '5HZAAREPzwBc4EPWWeTHA2WRcJoCgy4UBk8mwYFWR5BTCNcT'
 
 module.exports = {
   timetravel: false,
   bittensor: {
-    tvl: async () => {
-      const { data: { query: { account: { balanceTotal } } } } = await taoQuery();
-      return {
-        bittensor: balanceTotal / 1e9,
-      };
+    tvl: async (api) => {
+      const provider = new WsProvider('wss://entrypoint-finney.opentensor.ai:443')
+      const taoApi = await ApiPromise.create({ provider })
+      const { data: { free, reserved } } = await taoApi.query.system.account(TREASURY_ADDRESS)
+
+      api.addCGToken('bittensor', (Number(free) + Number(reserved)) / 1e9 )
+      await taoApi.disconnect()
     },
   },
 }
