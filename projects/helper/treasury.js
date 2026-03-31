@@ -76,15 +76,24 @@ function treasuryExports(config) {
 
     const baseExport = { tvl: sumTokensExport(tvlConfig) };
 
-    const complexExport = isComplex ? {
-      [chain]: {
+    if (isComplex) {
+      exportObj[chain] = {
         tvl: async (api) => {
+          // Run base sumTokens first (ankr token discovery)
+          await baseExport.tvl(api);
+
           if (!complexOwners.length) return api.getBalances();
           const data = await getComplexData();
           if (!data.length) return api.getBalances();
 
           const blacklist = new Set(getUniqueAddresses([...ownTokens, ...blacklistedTokens], false));
 
+          // List base tokens so we can identify receipt tokens to replace with DeBank's unwrapped values
+          const baseTokens = new Set(Object.keys(api.getBalancesV2().getBalances()).map(k => k.toLowerCase()));
+
+          // Add DeBank positions and collect pool.ids (receipt tokens) to remove
+          const debankAdded = new Set();
+          const poolIdsToRemove = new Set();
           for (const entry of data) {
             for (const token of entry.tokens || []) {
               if (getLlamaChain(token.chain) !== chain) continue;
@@ -92,21 +101,23 @@ function treasuryExports(config) {
                 for (const { id: rawId, decimals, amount } of asset_token_list) {
                   if (!rawId) continue;
                   const addr = rawId === 'eth' ? nullAddress : rawId.toLowerCase();
+                  debankAdded.add(addr);
                   if (blacklist.has(addr)) continue;
                   api.add(addr, amount * 10 ** decimals);
-                  if (pool && pool.id) api.removeTokenBalance(pool.id.toLowerCase());
                 }
+                if (pool && pool.id) poolIdsToRemove.add(pool.id.toLowerCase());
               }
             }
           }
+
+          // Remove receipt tokens that ankr found, unless DeBank also adds them as underlying assets
+          for (const poolAddr of poolIdsToRemove) {
+            if (debankAdded.has(poolAddr)) continue;
+            if (baseTokens.has(poolAddr) || baseTokens.has(`${chain}:${poolAddr}`))
+              api.removeTokenBalance(poolAddr);
+          }
           return api.getBalances();
         }
-      }
-    } : null;
-
-    if (isComplex) {
-      exportObj[chain] = {
-        tvl: sdk.util.sumChainTvls([baseExport.tvl, complexExport[chain].tvl])
       };
     } else {
       exportObj[chain] = baseExport;
