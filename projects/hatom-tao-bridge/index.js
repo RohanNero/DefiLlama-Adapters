@@ -28,6 +28,7 @@ const taoQuery = async () => {
 
 module.exports = {
   timetravel: false,
+  deadFrom: "2024-10-02",
   bittensor: {
     tvl: async () => {
       const { data: { query: { account: { balanceTotal } } } } = await taoQuery();
