@@ -6,17 +6,58 @@ const { getEnv } = require('../env')
 const { transformDexBalances } = require('../portedTokens')
 const { sliceIntoChunks, getUniqueAddresses } = require('../utils')
 
-//https://docs.sui.io/sui-jsonrpc
+//https://docs.sui.io/concepts/data-access/graphql-rpc
 
 const endpoint = () => getEnv('SUI_RPC')
 const graphEndpoint = () => getEnv('SUI_GRAPH_RPC')
 
+async function graphqlCall(query, variables = {}) {
+  const { data, errors } = await http.post(graphEndpoint(), { query, variables })
+  if (errors?.length && !data) throw new Error(`[sui graphql] ${errors[0].message}`)
+  return { data, errors }
+}
+
+// GraphQL returns flat JSON while JSON-RPC wraps nested Move structs as { type, fields }
+// Normalize to match old JSON-RPC format:
+//   - UID "id" fields: "0x..." -> { id: "0x..." }
+//   - Nested structs: { key: val } -> { fields: { key: val } }
+function normalizeFields(fields) {
+  if (!fields || typeof fields !== 'object') return fields
+  const normalized = {}
+  for (const [key, value] of Object.entries(fields)) {
+    if (key === 'id' && typeof value === 'string') {
+      normalized[key] = { id: value }
+    } else if (Array.isArray(value)) {
+      normalized[key] = value.map(v => (typeof v === 'object' && v !== null) ? wrapStruct(v) : v)
+    } else if (typeof value === 'object' && value !== null) {
+      normalized[key] = wrapStruct(value)
+    } else {
+      normalized[key] = value
+    }
+  }
+  return normalized
+}
+
+// Wrap a nested plain object as { fields: { ... } } to match JSON-RPC's struct format
+function wrapStruct(obj) {
+  if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return obj
+  return { fields: normalizeFields(obj) }
+}
+
+function formatObject(obj) {
+  if (!obj) return null
+  // GraphQL omits spaces after commas in type params; JSON-RPC includes them
+  const type = obj.type.repr.replace(/,(?!\s)/g, ', ')
+  return { type, fields: normalizeFields(obj.json), dataType: 'moveObject' }
+}
+
 async function getObject(objectId) {
-  return (await call('sui_getObject', [objectId, {
-    "showType": true,
-    "showOwner": true,
-    "showContent": true,
-  }])).content
+  const { data } = await graphqlCall(`{
+    object(address: "${objectId}") {
+      asMoveObject { contents { json type { repr } } }
+    }
+  }`)
+  return formatObject(data.object?.asMoveObject?.contents)
 }
 
 async function fnSleep(ms) {
@@ -37,8 +78,9 @@ async function queryEvents({ eventType, transform = i => i }) {
 }
 
 async function getObjects(objectIds, { sleep } = {}) {
-  if (objectIds.length > 9) {
-    const chunks = sliceIntoChunks(objectIds, 9)
+  if (!objectIds.length) return []
+  if (objectIds.length > 20) {
+    const chunks = sliceIntoChunks(objectIds, 20)
     const res = []
     for (const chunk of chunks) {
       if (sleep && res.length) await fnSleep(sleep)
@@ -46,19 +88,14 @@ async function getObjects(objectIds, { sleep } = {}) {
     }
     return res
   }
-  const {
-    result
-  } = await http.post(endpoint(), {
-    jsonrpc: "2.0", id: 1, method: 'sui_multiGetObjects', params: [objectIds, {
-      "showType": true,
-      "showOwner": true,
-      "showContent": true,
-    }],
-  })
-  return objectIds.map(i => result.find(j => j.data?.objectId === i)?.data?.content)
+  const aliases = objectIds.map((id, i) => `o${i}: object(address: "${id}") { asMoveObject { contents { json type { repr } } } }`).join('\n')
+  const { data } = await graphqlCall(`{ ${aliases} }`)
+  return objectIds.map((_, i) => formatObject(data[`o${i}`]?.asMoveObject?.contents))
 }
 
 async function getDynamicFieldObject(parent, id, { idType = '0x2::object::ID' } = {}) {
+  // Fall back to JSON-RPC for dynamic field lookups — the BCS encoding
+  // varies by type (object ID, vector<u8>, etc.) and is complex to handle generically
   return (await call('suix_getDynamicFieldObject', [parent, {
     "type": idType,
     "value": id
@@ -71,7 +108,7 @@ async function getDynamicFieldObjects({ parent, cursor = null, limit = 48, items
     result: { data, hasNextPage, nextCursor }
   } = await http.post(endpoint(), { jsonrpc: "2.0", id: 1, method: 'suix_getDynamicFields', params: [parent, cursor, limit], })
   sdk.log('[sui] fetched items length', data.length, hasNextPage, nextCursor)
-  const fetchIds = data.filter(idFilter).map(i => i.objectId).filter(i => !addedIds.has(i))
+  const fetchIds = data.filter(idFilter).map(i => i.objectId).filter(i => i && !addedIds.has(i))
   fetchIds.forEach(i => addedIds.add(i))
   const objects = await getObjects(fetchIds, { sleep })
   items.push(...objects)
@@ -79,6 +116,7 @@ async function getDynamicFieldObjects({ parent, cursor = null, limit = 48, items
   return getDynamicFieldObjects({ parent, cursor: nextCursor, items, limit, idFilter, addedIds, sleep })
 }
 
+// Legacy JSON-RPC call - kept as fallback
 async function call(method, params, { withMetadata = false } = {}) {
   if (!Array.isArray(params)) params = [params]
   const {
@@ -144,14 +182,30 @@ function dexExport({
 
 async function sumTokens({ owners = [], blacklistedTokens = [], api, tokens = [], }) {
   owners = getUniqueAddresses(owners, true)
-  const bals = await call('suix_getAllBalances', owners)
   const blacklistSet = new Set(blacklistedTokens)
   const tokenSet = new Set(tokens)
-  bals.forEach(i => {
-    if (blacklistSet.has(i.coinType)) return;
-    if (tokenSet.size > 0 && !tokenSet.has(i.coinType)) return;
-    api.add(i.coinType, i.totalBalance)
-  })
+
+  for (const owner of owners) {
+    let after = null
+    do {
+      const { data } = await graphqlCall(`query ($after: String) {
+        address(address: "${owner}") {
+          balances(after: $after) {
+            nodes { coinType { repr } totalBalance }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }`, { after })
+      const { nodes, pageInfo } = data.address.balances
+      after = pageInfo.hasNextPage ? pageInfo.endCursor : null
+      nodes.forEach(n => {
+        const coinType = n.coinType.repr
+        if (blacklistSet.has(coinType)) return
+        if (tokenSet.size > 0 && !tokenSet.has(coinType)) return
+        api.add(coinType, n.totalBalance)
+      })
+    } while (after)
+  }
   return api.getBalances()
 }
 
@@ -160,45 +214,32 @@ function sumTokensExport(config) {
 }
 
 async function queryEventsByType({ eventType, transform = i => i }) {
-  const query = `query GetEvents($after: String, $eventType: String!) {
-  events(first: 50, after: $after, filter: { eventType: $eventType }) {
-    pageInfo {
-      endCursor
-      hasNextPage
-    }
-    nodes {
-      contents {
-        json
-      }
-    }
-  }
-}`
   const items = []
   let after = null
   do {
-    const { events: { pageInfo: { endCursor, hasNextPage }, nodes } } = await sdk.graph.request(graphEndpoint(), query, { variables: { after, eventType } })
-    after = hasNextPage ? endCursor : null
-    items.push(...nodes.map(i => i.contents.json).map(transform))
+    const { data } = await graphqlCall(`query ($after: String) {
+      events(first: 50, after: $after, filter: { type: "${eventType}" }) {
+        pageInfo { endCursor hasNextPage }
+        nodes { contents { json } }
+      }
+    }`, { after })
+    const { pageInfo, nodes } = data.events
+    after = pageInfo.hasNextPage ? pageInfo.endCursor : null
+    items.push(...nodes.map(n => n.contents.json).map(transform))
   } while (after)
   return items
 }
 
 
 async function getTokenSupply(token) {
-  const { result } = await http.post(endpoint(), {
-    jsonrpc: "2.0",
-    id: 1,
-    method: 'suix_getTotalSupply',
-    params: [token],
-  })
-  const supply = result.value
-  const { result: metadata } = await http.post(endpoint(), {
-    jsonrpc: "2.0",
-    id: 1,
-    method: 'suix_getCoinMetadata',
-    params: [token],
-  })
-  const decimals = metadata?.decimals ?? 0
+  const { data } = await graphqlCall(`{
+    coinMetadata(coinType: "${token}") {
+      supply
+      decimals
+    }
+  }`)
+  const supply = data.coinMetadata.supply
+  const decimals = data.coinMetadata.decimals ?? 0
   return { supply, decimals, normalized: supply / 10 ** decimals }
 }
 
