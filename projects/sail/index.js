@@ -3,14 +3,8 @@ const { getConfig, configPost } = require('../helper/cache');
 const SUPPORTED_TOKENS_URL = 'https://app.sail.money/api/v1/projects/68b43fb4ced0704efcb3143c/pages/69d7b31663e3b54646702cb7/custom/supported_tokens';
 const ACTIVE_WALLETS_URL = 'https://app.sail.money/api/v1/projects/sail/pages/institutions/custom/get_all_wallets';
 
-const CHAIN_IDS = {
-    ethereum: 1,
-    base: 8453,
-    arbitrum: 42161,
-};
-
-async function getTokens(chainName) {
-    const data = await configPost(`sail/supported-tokens-${chainName}`, SUPPORTED_TOKENS_URL, { params: { chain: CHAIN_IDS[chainName] } });
+async function getTokens(chainId) {
+    const data = await configPost(`sail/supported-tokens-${chainId}`, SUPPORTED_TOKENS_URL, { params: { chain: chainId } });
     return Array.isArray(data) ? data : (data?.result ?? []);
 }
 
@@ -23,7 +17,7 @@ async function getOwners() {
 async function tvl(api) {
     const [owners, tokens] = await Promise.all([
         getOwners(),
-        getTokens(api.chain),
+        getTokens(api.chainId),
     ]);
     await api.sumTokens({ tokens, owners, permitFailure: true });
 }
