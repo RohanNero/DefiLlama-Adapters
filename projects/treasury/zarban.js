@@ -33,7 +33,7 @@ async function treasuryTvl(api) {
   // stablecoin system treasury
   const zarBalance = await api.call({ abi: abi.zar, params: [vowAddress], target: vatAddress })
   const sinBalance = await api.call({ abi: abi.sin, params: [vowAddress], target: vatAddress })
-  const bal = zarBalance > sinBalance ? (zarBalance - sinBalance) / 1e27 : 0
+  const bal = BigInt(zarBalance) > BigInt(sinBalance) ? (zarBalance - sinBalance) / 1e27 : 0
   api.add(ZAR, bal)
 }
 
