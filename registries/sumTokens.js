@@ -20901,6 +20901,63 @@ const configs = {
       ]
     },
   },
+  "p2pmoney": {
+    "methodology": "Counts all tokens locked on-chain in the P2PEscrow escrow contracts.",
+    "ethereum": {
+      "owners": [
+        "0x828f442bcf60D8eFcf3e7cFf11Bfb7C15318B9de"
+      ],
+      "tokens": [
+        ADDRESSES.ethereum.USDC,
+        ADDRESSES.ethereum.USDT
+      ]
+    },
+    "arbitrum": {
+      "owners": [
+        "0xE7EE4a509B65CDA409DC43b2f4a8ebE1bfa5A76f"
+      ],
+      "tokens": [
+        ADDRESSES.arbitrum.USDC_CIRCLE,
+        ADDRESSES.arbitrum.USDT
+      ]
+    },
+    "polygon": {
+      "owners": [
+        "0x18d6e64B5Acd9C8e4695Bb0014842684bC5A3cb0"
+      ],
+      "tokens": [
+        ADDRESSES.polygon.USDC_CIRCLE,
+        ADDRESSES.polygon.USDT
+      ]
+    },
+    "base": {
+      "owners": [
+        "0x866165d601406B6bAB78B431f84746d510Ee82bc"
+      ],
+      "tokens": [
+        ADDRESSES.base.USDC
+      ]
+    },
+    "bsc": {
+      "owners": [
+        "0xbcE4Cc7aE832a76039dd831CE1AcF232333E57B9"
+      ],
+      "tokens": [
+        ADDRESSES.bsc.USDC,
+        ADDRESSES.bsc.USDT
+      ]
+    },
+    "celo": {
+      "owners": [
+        "0xbE50Daf0b6F3511a3fc07bb50bDa7a371e9A5238"
+      ],
+      "tokens": [
+        ADDRESSES.celo.USDC,
+        ADDRESSES.celo.USDT,
+        "0x8A567e2aE79CA692Bd748aB832081C45de4041eA"
+      ]
+    },
+  },
   "paal": {
     "misrepresentedTokens": true,
     "methodology": "Counts all PALL staking in the 3 pools",
