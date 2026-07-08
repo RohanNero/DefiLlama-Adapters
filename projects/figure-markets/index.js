@@ -9,6 +9,12 @@ const collateralizedAssets = [
     'pm.pool.asset.3hjz8rcr3pejdc3msntlvy' // YLDS HELOC+
 ]
 
+// holds >95% of uusd.trading supply committed to the market (no other assets; receives uusd.trading from other accounts)
+// counting it includes the whole stablecoin supply as TVL (2nd and 3rd largest holders have trading activity and hold other tokens)
+const excludedOwners = [
+    'pb100ay24eh6t8mm87j9jkt7hg0daxyzzunjpwejcejcchqmcsq3haqfjzfnl',
+]
+
 const getLockedTokens = async (api) => {
     const commitments = await queryV1Beta1V2({
         chain: 'provenance',
@@ -16,6 +22,7 @@ const getLockedTokens = async (api) => {
         limit: 1000,
     })
     for (const c of commitments) {
+        if (excludedOwners.includes(c.account)) continue
         for (const a of c.amount) {
             if (!collateralizedAssets.includes(a.denom)) {
                 api.add(a.denom, a.amount)
