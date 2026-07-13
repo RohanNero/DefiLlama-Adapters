@@ -9,22 +9,28 @@ const COIN_TYPES= {
   iBTC: "0x387c459c5c947aac7404e53ba69541c5d64f3cf96f3bc515e7f8a067fb725b54::ibtc::IBTC"
 };
 
-async function getStIOTARatio() {
-    const nativePool = await iota.getObject('0x02d641d7b021b1cd7a2c361ac35b415ae8263be0641f9475ec32af4b9d8a8056');
-    const stIOTAMetadata = await iota.getObject('0x8c25ec843c12fbfddc7e25d66869f8639e20021758cac1a3db0f6de3c9fda2ed');
+const CERT_NATIVE_POOL = '0x02d641d7b021b1cd7a2c361ac35b415ae8263be0641f9475ec32af4b9d8a8056'
+const CERT_METADATA = '0x8c25ec843c12fbfddc7e25d66869f8639e20021758cac1a3db0f6de3c9fda2ed'
+const VCERT_NATIVE_POOL = '0xb435fa61ee8d5473ab36de02c88756f8c74fcc031b4e3a2fe2a6647bb06b2872'
+const VCERT_METADATA = '0xb45b32d8d58c6499795036faa92b0561c6df089cdd4fc6ae8a0543981a698bf1'
 
-    const stIOTATotalSupply = BigInt(stIOTAMetadata.fields.total_supply.fields.value) / BigInt(10 ** 9)
-    const stIOTATotalStaked = BigInt(nativePool.fields.total_staked) / BigInt(10 ** 9)
-    const stIOTATotalRewards = BigInt(nativePool.fields.total_rewards) / BigInt(10 ** 9)
-    const tvl = stIOTATotalStaked + stIOTATotalRewards
+async function getLstPerIotaRatio(nativePoolId, metadataId) {
+    const nativePool = await iota.getObject(nativePoolId);
+    const metadata = await iota.getObject(metadataId);
 
-    return Number(stIOTATotalSupply) / Number(tvl)    
+    const totalSupply = BigInt(metadata.fields.total_supply.fields.value) / BigInt(10 ** 9)
+    const totalStaked = BigInt(nativePool.fields.total_staked) / BigInt(10 ** 9)
+    const totalRewards = BigInt(nativePool.fields.total_rewards) / BigInt(10 ** 9)
+    const staked = totalStaked + totalRewards
+
+    return Number(totalSupply) / Number(staked)
 }
 
 async function tvl(api) {
     const vaults = await getAllVaults()
-    const stIOTARatio = await getStIOTARatio()
-    Object.values(vaults).forEach(async (vault)=>{
+    const stIOTARatio = await getLstPerIotaRatio(CERT_NATIVE_POOL, CERT_METADATA)
+    const vIOTARatio = await getLstPerIotaRatio(VCERT_NATIVE_POOL, VCERT_METADATA)
+    Object.values(vaults).forEach((vault)=>{
         const balanceAmount = Number(vault.collateralBalance)
         const symbol = vault.token
         if(symbol === 'IOTA'){
@@ -32,6 +38,9 @@ async function tvl(api) {
         }
         if(symbol === 'stIOTA'){
             api.add(COIN_TYPES['IOTA'], balanceAmount/stIOTARatio)
+        }
+        if(symbol === 'vIOTA'){
+            api.add(COIN_TYPES['IOTA'], balanceAmount/vIOTARatio)
         }
         if(symbol === 'iBTC'){
             api.add(COIN_TYPES['iBTC'], balanceAmount)

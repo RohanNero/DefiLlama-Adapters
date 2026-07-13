@@ -26,6 +26,16 @@ const VAULT_MAP = {
       initialSharedVersion: 22329896,
     },
   },
+  iBTC: {
+    vault: {
+      objectId: "0xcc094d9e3b491b0c943bb18daf07a49bd951f34688f9610d90982de06fc0c5c9",
+    },
+  },
+  vIOTA: {
+    vault: {
+      objectId: "0x53b6405d2672be1e73f8ddea1766dbda57f1fed677be58fbfedc9fdddaafdd26",
+    },
+  },
 };
 
 const formatUnits = (value, decimals) => {
