@@ -1,6 +1,5 @@
 const iota = require('../helper/chain/iota')
 const {getAllVaults} = require("./utils")
-const ADDRESSES = require('../helper/coreAssets.json')
 
 const COIN_TYPES= {
   IOTA: "0x2::iota::IOTA",
