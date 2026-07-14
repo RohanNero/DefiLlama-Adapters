@@ -1,5 +1,6 @@
 const iota = require('../helper/chain/iota')
 const {getAllVaults} = require("./utils")
+const ADDRESSES = require('../helper/coreAssets.json')
 
 const COIN_TYPES= {
   IOTA: "0x2::iota::IOTA",
@@ -30,22 +31,24 @@ async function tvl(api) {
     const vaults = await getAllVaults()
     const stIOTARatio = await getLstPerIotaRatio(CERT_NATIVE_POOL, CERT_METADATA)
     const vIOTARatio = await getLstPerIotaRatio(VCERT_NATIVE_POOL, VCERT_METADATA)
+    const balances = {}
     Object.values(vaults).forEach((vault)=>{
-        const balanceAmount = Number(vault.collateralBalance)
+        const balanceAmount = Number(vault.collateralBalance) / 10 ** vault.collateralDecimal
         const symbol = vault.token
         if(symbol === 'IOTA'){
-            api.add(COIN_TYPES['IOTA'], balanceAmount)
+            balances.iota = (balances.iota || 0) + balanceAmount
         }
         if(symbol === 'stIOTA'){
-            api.add(COIN_TYPES['IOTA'], balanceAmount/stIOTARatio)
+            balances.iota = (balances.iota || 0) + balanceAmount/stIOTARatio
         }
         if(symbol === 'vIOTA'){
-            api.add(COIN_TYPES['IOTA'], balanceAmount/vIOTARatio)
+            balances.iota = (balances.iota || 0) + balanceAmount/vIOTARatio
         }
         if(symbol === 'iBTC'){
-            api.add(COIN_TYPES['iBTC'], balanceAmount)
+            balances[`iota:${COIN_TYPES['iBTC']}`] = (balances[`iota:${COIN_TYPES['iBTC']}`] || 0) + Number(vault.collateralBalance)
         }
     })
+    return balances
 }
 
 
