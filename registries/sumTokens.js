@@ -2548,7 +2548,7 @@ const configs = {
     },
   },
   "bot-fun": {
-    "methodology": "TVL is the native TIA held in the bot.fun factory contract as bonding curve reserves, including accrued creator and referral rewards.",
+    "methodology": "TVL is the native TIA held in the bot.fun factory contract as bonding curve reserves, including accrued creator and referral 0x279dc5E05d43644C6cd2F2813F306a320e785cdDrewards.",
     "eden": {
       "tvl": {
         "owner": "0x279dc5E05d43644C6cd2F2813F306a320e785cdD",
@@ -24727,33 +24727,6 @@ const configs = {
         "__staking": [
           "0xFc3860113b14F592257E325117b4b7a63464E480",
           "0x4d870Ae52e61d4FB6e125f4380cC0c0F9f15A575"
-        ]
-      }
-    },
-  },
-  "saffron": {
-    "misrepresentedTokens": true,
-    "methodology": "We count liquidity for Saffon V2 on the Pools (LP) through SaffronStakingV2 Contract",
-    "ethereum": {
-      "tvl": {
-        "__empty": true
-      },
-      "staking": {
-        "__staking": [
-          "0x4eB4C5911e931667fE1647428F38401aB1661763",
-          "0xb753428af26e81097e7fd17f40c88aaa3e04902c"
-        ]
-      },
-      "pool2": {
-        "__staking": [
-          [
-            "0x4eB4C5911e931667fE1647428F38401aB1661763"
-          ],
-          [
-            "0xC76225124F3CaAb07f609b1D147a31de43926cd6",
-            "0x23a9292830fc80db7f563edb28d2fe6fb47f8624",
-            "0x83887500cf852cb4af33d74c148c9c7c35f91620"
-          ]
         ]
       }
     },
