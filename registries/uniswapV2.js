@@ -3044,6 +3044,9 @@ const uniV2Configs = {
   },
   'giga-dex': {
     robinhood: '0x6Fdf38f92eAd1adFc04B73aaa947ab254f6c0916'
+  },
+  'diamond-finance': {
+    bitkub: '0x6E906Dc4749642a456907deCB323A0065dC6F26E'
   }
 }
 
