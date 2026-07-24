@@ -4369,6 +4369,12 @@ const configs = {
       ownTokens: ['0xA533f744B179F2431f5395978e391107DC76e103'],
     },
   },
+  'treasury/prophet-market': {
+    polygon: {
+      owners: ['0x2C5f34744c445613f9ecbb3c8e109F1c8D86De76', '0xBA8065151BC3191d0A032ca9499AA54E97899E8E'],
+      tokens: [nullAddress, ADDRESSES.polygon.USDC_CIRCLE],
+    },
+  },
   'treasury/proptech': {
     proptech: {
       owners: ['0x243AC97f37040A7f64a11B84c818cE222A8d3ab7'],
