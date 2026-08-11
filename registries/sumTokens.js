@@ -25467,6 +25467,197 @@ const configs = {
       "owner": "5cv5tMwrCMAVbwAC5icUPB5XB4qQpsaf3KaGP7Ygdomc"
     },
   },
+  "sodax": {
+    methodology: 'TVL sums assets custodied by the SODAX AssetManager on each supported spoke chain plus the Sonic-native assets held in the hub-side sodaX vault tokens (sodaUSDC, sodaUSDT, sodaETH, sodaS). Money-market supplied collateral is not counted separately because it is the same wrapped representation of assets already locked on spoke AssetManagers. Solver inventory is external and excluded. Staked SODA (xSODA + stSoda) is reported under staking rather than TVL. Non-EVM spokes (Solana, Bitcoin, Stellar, Sui, ICON, NEAR, Stacks, Injective) will be added in a follow-up.',
+    "ethereum": {
+      owner: '0x39E77f86C1B1f3fbAb362A82b49D2E86C09659B4',
+      tokens: [
+        ADDRESSES.null,
+        '0x1f22279C89B213944b7Ea41daCB0a868DdCDFd13', // bnUSD
+        '0x4A1C82744cDDeE675A255fB289Cb0917A482e7C7', // SODA
+        ADDRESSES.ethereum.USDC,
+        ADDRESSES.ethereum.USDS,
+        '0x0921799CB1d702148131024d18fCdE022129Dc73', // LL
+        ADDRESSES.ethereum.WEETH,
+        ADDRESSES.ethereum.WSTETH,
+        ADDRESSES.ethereum.USDT,
+        ADDRESSES.ethereum.WBTC,
+        '0xD166337499E176bbC38a1FBd113Ab144e5bd2Df7', // sUSDat
+        ADDRESSES.ethereum.AAVE,
+        ADDRESSES.ethereum.LINK,
+        ADDRESSES.ethereum.UNI,
+        '0x6982508145454Ce325dDbE47a25d4ec3d2311933', // PEPE
+        '0x57e114B691Db790C35207b2e685D4A43181e6061', // ENA
+        ADDRESSES.ethereum.USDe,
+        ADDRESSES.ethereum.sUSDe,
+        '0x6c3ea9036406852006290770BEdFcAbA0e23A0e8', // PYUSD
+        '0x6985884C4392D348587B19cb9eAAf157F13271cd', // ZRO
+        '0x45804880De22913dAFE09f4980848ECE6EcbAf78', // PAXG
+        '0x68749665FF8D2d112Fa859AA293F07A622782F38', // XAUt
+        '0x8d0D000Ee44948FC98c9B98A4FA4921476f08B0d', // USD1
+        ADDRESSES.ethereum.DAI,
+        ADDRESSES.ethereum.cbBTC,
+        ADDRESSES.ethereum.RETH,
+      ],
+    },
+    "avax": {
+      owner: '0x5bDD1E1C5173F4c912cC919742FB94A55ECfaf86',
+      tokens: [
+        ADDRESSES.null,
+        '0x6958a4CBFe11406E2a1c1d3a71A1971aD8B3b92F', // bnUSD
+        ADDRESSES.avax.USDt,
+        ADDRESSES.avax.USDC,
+        '0x390ceed555905ec225Da330A188EA04e85570f00', // SODA
+        ADDRESSES.avax.WETH_e,
+      ],
+    },
+    "arbitrum": {
+      owner: '0x348BE44F63A458be9C1b13D6fD8e99048F297Bc3',
+      tokens: [
+        ADDRESSES.null,
+        '0xA256dd181C3f6E5eC68C6869f5D50a712d47212e', // bnUSD
+        ADDRESSES.arbitrum.WSTETH,
+        ADDRESSES.arbitrum.weETH,
+        '0x6c84a8f1c29108F47a79964b5Fe888D4f4D0dE40', // tBTC
+        ADDRESSES.arbitrum.WBTC,
+        ADDRESSES.arbitrum.USDC_CIRCLE,
+        ADDRESSES.arbitrum.USDT,
+        '0x5bda87f18109CA85fa7ADDf1D48B97734e9dc6F5', // SODA
+        '0xddb46999f8891663a8f2828d25298f70416d7610', // sUSDS
+        '0x6491c05A82219b8D1479057361ff1654749b876b', // USDS
+        ADDRESSES.arbitrum.ARB,
+        '0xba5DdD1f9d7F570dc94a51479a000E3BCE967196', // AAVE
+        ADDRESSES.arbitrum.LINK,
+        '0xFa7F8980b0f1E64A2062791cc3b0871572f1F7f0', // UNI
+        '0x11cDb42B0EB46D95f990BeDD4695A6e3fA034978', // CRV
+        '0x0c880f6761F1af8d9Aa9C466984b80DAb9a8c9e8', // PENDLE
+        '0xEC70Dcb4A1EFa46b8F2D97C310C9c4790ba5ffA8', // rETH
+      ],
+    },
+    "base": {
+      owner: '0x348BE44F63A458be9C1b13D6fD8e99048F297Bc3',
+      tokens: [
+        ADDRESSES.null,
+        '0xAcfab3F31C0a18559D78556BBf297EC29c6cf8aa', // bnUSD
+        ADDRESSES.base.weETH,
+        ADDRESSES.base.USDC,
+        '0x820C137fa70C8691f0e44Dc420a5e53c168921Dc', // USDS
+        ADDRESSES.base.wstETH,
+        ADDRESSES.base.cbBTC,
+        '0xdc5B4b00F98347E95b9F94911213DAB4C687e1e3', // SODA
+        ADDRESSES.base.USDT,
+        '0x0b3e328455c4059EEb9e3f84b5543F74E24e7E1b', // VIRTUAL
+        ADDRESSES.base.cbETH,
+        '0x940181a94A35A4569e4529A3CDfB74e38FD98631', // AERO
+      ],
+    },
+    "optimism": {
+      owner: '0x348BE44F63A458be9C1b13D6fD8e99048F297Bc3',
+      tokens: [
+        ADDRESSES.null,
+        '0xF4f7dC27c17470a26d0de9039Cf0EA5045F100E8', // bnUSD
+        ADDRESSES.optimism.USDC_CIRCLE,
+        ADDRESSES.optimism.WSTETH,
+        ADDRESSES.optimism.weETH,
+        ADDRESSES.optimism.USDT,
+        '0x1f22279C89B213944b7Ea41daCB0a868DdCDFd13', // SODA
+        ADDRESSES.optimism.OP,
+        ADDRESSES.optimism.WBTC,
+      ],
+    },
+    "bsc": {
+      owner: '0x348BE44F63A458be9C1b13D6fD8e99048F297Bc3',
+      tokens: [
+        ADDRESSES.null,
+        '0x8428FedC020737a5A2291F46cB1B80613eD71638', // bnUSD
+        ADDRESSES.bsc.ETH,
+        ADDRESSES.bsc.BTCB,
+        ADDRESSES.bsc.USDC,
+        '0xdc5B4b00F98347E95b9F94911213DAB4C687e1e3', // SODA
+        ADDRESSES.bsc.weETH,
+        ADDRESSES.bsc.USDT,
+        '0x0E09FaBB73Bd3Ade0a17ECC321fD13a19e81cE82', // CAKE
+        ADDRESSES.bsc.FDUSD,
+        ADDRESSES.bsc.USD1,
+        '0x000Ae314E2A2172a039B26378814C252734f556A', // ASTER
+        '0x1D2F0da169ceB9fC7B3144628dB156f3F6c60dBE', // XRP
+        '0x3EE2200Efb3400fAbB9AacF31297cBdD1d435D47', // ADA
+        '0xbA2aE424d960c26247Dd6c32edC70B295c744C43', // DOGE
+        '0x570A5D26f7765Ecb712C0924E4De545B89fD43dF', // SOL
+        '0x7083609fCE4d1d8Dc0C979AAb8c869Ea2C873402', // DOT
+        '0xF8A0BF9cF54Bb92F17374d9e9A321E6a111a51bD', // LINK
+      ],
+    },
+    "polygon": {
+      owner: '0x348BE44F63A458be9C1b13D6fD8e99048F297Bc3',
+      tokens: [
+        ADDRESSES.null,
+        '0x39E77f86C1B1f3fbAb362A82b49D2E86C09659B4', // bnUSD
+        ADDRESSES.polygon.USDC_CIRCLE,
+        '0xDDF645F33eDAD18fC23E01416eD0267A1bF59D45', // SODA
+        ADDRESSES.polygon.WSTETH,
+        ADDRESSES.polygon.USDT,
+        ADDRESSES.polygon.WBTC,
+        '0xD6DF932A45C0f255f85145f286eA0b292B21C90B', // AAVE
+        '0x53E0bca35eC356BD5dDDFebbD1Fc0fD03FaBad39', // LINK
+        ADDRESSES.polygon.DAI,
+      ],
+    },
+    "hyperliquid": {
+      owner: '0xAfd6A6e4287A511D3BAAd013093815268846FBb7',
+      tokens: [
+        ADDRESSES.null,
+        '0x506Ba7C8d91dAdf7a91eE677a205D9687b751579', // bnUSD
+        '0xA28C70F92a1B2513edCdDD29c2E5195a4B785aB2', // SODA
+        ADDRESSES.hyperliquid.USDC,
+        ADDRESSES.hyperliquid.USDT0,
+        '0x9FDBdA0A5e284c32744D2f17Ee5c74B284993463', // UBTC
+        '0xBe6727B535545C67d5cAa73dEa54865B92CF7907', // UETH
+        '0xfD739d4e423301CE9385c1fb8850539D657C296D', // kHYPE
+        '0x111111a1a0667d36bD57c0A9f569b98057111111', // USDH
+      ],
+    },
+    "lightlink_phoenix": {
+      owner: '0x4A1C82744cDDeE675A255fB289Cb0917A482e7C7',
+      tokens: [
+        ADDRESSES.null,
+        '0x36134A03dcD03Bbe858B8F7ED28a71AAC608F9E7', // bnUSD
+        '0x6BC8C37cba91F76E68C9e6d689A9C21E4d32079B', // SODA
+        ADDRESSES.lightlink_phoenix.USDC,
+        ADDRESSES.lightlink_phoenix['USDT.e'],
+        '0x519d3443cACc61bD844546eDAea48E5502021802', // LL
+      ],
+    },
+    "klaytn": {
+      owner: '0x6D2126DB97dd88AfA85127253807D04A066b6746',
+      tokens: [
+        ADDRESSES.null,
+        '0xF8D13cAcb8E2B6BA8396DbA35a7365EF6b603cd6', // bnUSD
+        ADDRESSES.klaytn.USDT_1,
+        '0x772ffe538e45b2cddfb5823041ec26c44815b9ab', // SODA
+      ],
+    },
+    "hedera": {
+      owner: '0x0df73542cC68bDC01b361d231c60F726B0e0bC05',
+      tokens: [
+        ADDRESSES.null,
+        '0x0000000000000000000000000000000000a0286a', // bnUSD
+        '0x0000000000000000000000000000000000a02869', // SODA
+        ADDRESSES.hedera.USDC,
+      ],
+    },
+    "sonic": {
+      tvl: {
+        ownerTokens: [
+          [[ADDRESSES.sonic.USDC_e], '0xAbbb91c0617090F0028BDC27597Cd0D038F3A833'],
+          [[ADDRESSES.sonic.USDT], '0xbDf1F453FCB61424011BBDDCB96cFDB30f3Fe876'],
+          [['0x50c42dEAcD8Fc9773493ED674b675bE577f2634b'], '0x4effB5813271699683C25c734F4daBc45B363709'],
+          [[ADDRESSES.sonic.wS], '0x62ecc3Eeb80a162c57624B3fF80313FE69f5203e'],
+        ],
+      },
+      staking: { owners: ['0xADC6561Cc8FC31767B4917CCc97F510D411378d9', '0x4333B324102d00392038ca92537DfbB8CB0DAc68'], tokens: ['0x7c7d53EEcda37a87ce0D5bf8E0b24512A48dC963'] },
+    },
+  },
   "sodex": {
     "methodology": "TVL is calculated as the sum of all assets held in SoDex custody addresses across multiple chains. SOSO token holdings are tracked separately as staking.",
     "timetravel": false,
