@@ -1,151 +1,124 @@
-const { fetchURL, postURL } = require('../helper/utils');
+const { fetchURL } = require('../helper/utils');
+const { post } = require('../helper/http');
 
 const DANOGO_GATEWAY_ENDPOINT = 'https://danogo-gateway.tekoapis.com/api/v1'
 const KUPO_ENDPOINT = 'https://kupo.tekoapis.com/matches'
+const KOIOS_ENDPOINT = 'https://api.koios.rest/api/v1'
 const DECODED_PREFIX_LENGTH = 2;
 const ADA_TO_LOVELACE = 1000000;
+
+const POOL_CONTRACTS = [
+  'addr1wx2degj2ru0uctl4rnvs7vh5l608smvxrgkm7lf8txxjd6qs43szs',
+  'addr1wxq5m69fj3ffw25l48lzcr6e7jtf0usgqpwqq8k2c8wl64cvrfrgq',
+]
+const MARKET_NFT_POLICY = '814de8a99452972a9fa9fe2c0f59f49697f208005c001ecac1ddfd57'
+
+const STAKING_CONTRACT = 'addr1xxt4n07cnlafzefqvne69mmxmnzu2t9gtd27jw9d9yvc7u5htxla38l6j9jjqe8n5thkdhx9c5k2sk64ayu262ge3aequnmfak'
+
+// Danogo-minted tokens (e.g. dADA,dUSDM,dUSDA,dUSDCx,dBTC)
+const DANOGO_POLICIES = [
+  '94dca24a1f1fcc2ff51cd90f32f4fe9e786d861a2dbf7d27598d26e8',
+  '73f29518da0013a671458d52624a4828c5b5bedaff8a950b0063b1cf',
+]
 
 // Bech32 character set
 const ALPHABET = 'qpzry9x8gf2tvdw0s3jn54khce6mua7l';
 const ALPHABET_MAP = {};
-for (let z = 0; z < ALPHABET.length; z++) {
-  const x = ALPHABET.charAt(z);
-  ALPHABET_MAP[x] = z;
-}
+for (let z = 0; z < ALPHABET.length; z++) ALPHABET_MAP[ALPHABET.charAt(z)] = z;
 
 function convert(data, inBits, outBits, pad) {
-  let value = 0;
-  let bits = 0;
+  let value = 0, bits = 0;
   const maxV = (1 << outBits) - 1;
   const result = [];
-
   for (let i = 0; i < data.length; ++i) {
     value = (value << inBits) | data[i];
     bits += inBits;
-
     while (bits >= outBits) {
       bits -= outBits;
       result.push((value >> bits) & maxV);
     }
   }
-
   if (pad) {
-    if (bits > 0) {
-      result.push((value << (outBits - bits)) & maxV);
-    }
+    if (bits > 0) result.push((value << (outBits - bits)) & maxV);
   } else {
     if (bits >= inBits) return 'Excess padding';
     if ((value << (outBits - bits)) & maxV) return 'Non-zero padding';
   }
-
   return result;
 }
 
 const bech32AddressToHexString = (address) => {
-  // Don't allow mixed case
   const lowered = address.toLowerCase();
   if (address !== lowered) throw new Error('Mixed-case string');
-
   const split = lowered.lastIndexOf('1');
-  if (split === -1) throw new Error('No separator character');
-  if (split === 0) throw new Error('Missing prefix');
-
-  const prefix = lowered.slice(0, split);
+  if (split <= 0) throw new Error('Missing prefix/separator');
   const wordChars = lowered.slice(split + 1);
   if (wordChars.length < 6) throw new Error('Data too short');
-
-  // Convert characters to 5-bit integers
   const words = [];
   for (let i = 0; i < wordChars.length - 6; ++i) {
-    const c = wordChars.charAt(i);
-    const v = ALPHABET_MAP[c];
-    if (v === undefined) throw new Error('Unknown character ' + c);
+    const v = ALPHABET_MAP[wordChars.charAt(i)];
+    if (v === undefined) throw new Error('Unknown character ' + wordChars.charAt(i));
     words.push(v);
   }
-
-  // Convert from 5-bit to 8-bit
   const decoded = convert(words, 5, 8, false);
   if (!Array.isArray(decoded)) throw new Error(decoded);
-
   return Buffer.from(decoded).toString('hex').substring(DECODED_PREFIX_LENGTH);
 };
 
 const fetchSmartContractAddresses = async () => {
-  const smartContractResponse = await fetchURL(`${DANOGO_GATEWAY_ENDPOINT}/smartcontract-addresses`);
-  return smartContractResponse.data.data.addresses.map((address) => bech32AddressToHexString(address));
+  const res = await fetchURL(`${DANOGO_GATEWAY_ENDPOINT}/smartcontract-addresses`);
+  return res.data.data.addresses.map(bech32AddressToHexString);
 }
 
-const fetchSmartContractUTXOs = async (address) => {
-  const kupoResponse = await fetchURL(`${KUPO_ENDPOINT}/${address}/*?unspent`);
-  return kupoResponse.data;
+const fetchUTXOs = async (pattern) => {
+  const res = await fetchURL(`${KUPO_ENDPOINT}/${pattern}?unspent`);
+  return res.data;
 }
 
-const fetchAssetValue = async (assetsInfo) => {
-  const assetIds = Object.keys(assetsInfo)
-  let totalAssetsValue = 0;
-  const gatewayResponse = await postURL(`${DANOGO_GATEWAY_ENDPOINT}/cardano-asset-value`, { assetIds: assetIds});
-  gatewayResponse.data.data.assetValues.forEach((asset) => {
-    let priceInLovelace = BigInt(0);
-    if (asset.adaValue && BigInt(asset.adaValue) !== BigInt(0)) {
-      priceInLovelace = BigInt(asset.adaValue) * BigInt(assetsInfo[asset.assetId]);
-    } else if (
-      asset.exchangeRateNum &&
-      asset.exchangeRateDenom &&
-      BigInt(asset.exchangeRateDenom) !== BigInt(0)
-    ) {
-      const price = Math.floor((Number(asset.exchangeRateNum) / Number(asset.exchangeRateDenom)) * Number(assetsInfo[asset.assetId]));
-      priceInLovelace = BigInt(price);
-    }
+async function tvl(api) {
+  const scriptHexes = await fetchSmartContractAddresses();
+  const patterns = [
+    ...scriptHexes.map((h) => `${h}/*`), // payment-credential wildcard: captures all stake variants
+    STAKING_CONTRACT, // full address
+  ];
 
-    const assetValue = Number(priceInLovelace * BigInt(100) / BigInt(ADA_TO_LOVELACE)) / 100;
-    totalAssetsValue += assetValue;
-  });
-  return totalAssetsValue;
-}
+  const utxoSets = await Promise.all(patterns.map(fetchUTXOs));
 
-function mergeObjectsWithSum(target, ...sources) {
-  for (const source of sources) {
-      for (const key in source) {
-          if (source.hasOwnProperty(key)) {
-              if (key in target) {
-                  target[key] += source[key];
-              } else {
-                  target[key] = source[key];
-              }
-          }
+  for (const utxos of utxoSets) {
+    for (const utxo of utxos) {
+      api.add('lovelace', utxo.value.coins); // ADA
+      for (const [assetId, quantity] of Object.entries(utxo.value.assets || {})) {
+        // assetId is "policyId.assetNameHex"; skip protocol-minted receipts, keep real deposits.
+        if (DANOGO_POLICIES.includes(assetId.split('.')[0])) continue;
+        api.add(assetId.replace('.', ''), quantity); // concatenated unit is how the coins server keys it
       }
+    }
   }
-  return target;
 }
 
-const fetch = async () => {
-  const smartContracts = await fetchSmartContractAddresses();
+async function borrowed(api) {
+  for (const contract of POOL_CONTRACTS) {
+    const utxos = await post(`${KOIOS_ENDPOINT}/address_utxos`, { _addresses: [contract], _extended: true });
+    for (const utxo of utxos) {
+      const assets = utxo.asset_list || [];
+      if (!utxo.inline_datum || !assets.some((a) => a.policy_id === MARKET_NFT_POLICY)) continue;
 
-  const smartContractsUtxos = await Promise.all(smartContracts.map((address) => {
-    return fetchSmartContractUTXOs(address)
-  }));
+      const totalBorrow = Number(utxo.inline_datum.value.fields[2].int);
+      if (!totalBorrow) continue;
 
-  let assetInfos = {};
-  let totalValueLocked = 0;
-  smartContractsUtxos.forEach(async (smUtxos) => {
-    smUtxos.forEach((utxo) => {
-      totalValueLocked += utxo.value.coins / ADA_TO_LOVELACE;
-      assetInfos = mergeObjectsWithSum(assetInfos, utxo.value.assets);
-    })
-  });
-
-  // backing/pricing behind those quotes could not be verified, so only
-  // the ADA locked in the contracts is counted 
-  // const totalAssetsValues = await fetchAssetValue(assetInfos);
-  // totalValueLocked += totalAssetsValues;
-
-  return { cardano: totalValueLocked };
+      const underlyingAsset = assets.find((a) => a.policy_id !== MARKET_NFT_POLICY && !DANOGO_POLICIES.includes(a.policy_id));
+      const underlying = underlyingAsset ? underlyingAsset.policy_id + (underlyingAsset.asset_name || '') : 'lovelace';
+      api.add(underlying, totalBorrow);
+    }
+  }
 }
 
 module.exports = {
-  misrepresentedTokens: true,
   timetravel: false,
+  methodology:
+    'TVL is the user-deposited assets (ADA + native tokens) locked in Dano Finance smart-contract UTXOs on Cardano, plus the ADA routed to the staking contract. Borrowed is the underlying lent out of each lending market, read from the market UTXO datums.',
   cardano: {
-    tvl: fetch
+    tvl,
+    borrowed,
   },
 }
