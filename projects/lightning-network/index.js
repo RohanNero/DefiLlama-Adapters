@@ -1,4 +1,4 @@
-const { get } = require("../helper/http");
+const { get, graphQuery } = require("../helper/http");
 
 const dayHistory = {};
 
@@ -20,6 +20,19 @@ async function GetDailyHistory1() {
     const day = new Date(row.added * 1000).toISOString().slice(0, 10);
     dayHistory[day] = row.total_capacity / 1e8
   });
+}
+
+async function GetAmbossHistory() {
+  const query = 'query { getNetworkMetrics { all_time_series { series { name series { date total_capacity } } } } }'
+  const res = await graphQuery('https://api.amboss.space/graphql', query)
+  const amboss = res.getNetworkMetrics.all_time_series.series.find((s) => s.name === 'AMBOSS')
+  if (!amboss) return
+
+  amboss.series.forEach((p) => {
+    if (p.total_capacity == null) return
+    const day = p.date.slice(0, 10)
+    if (dayHistory[day] == null) dayHistory[day] = p.total_capacity / 1e8
+  })
 }
 
 async function get1MLCapacity() {
@@ -52,6 +65,11 @@ async function tvl({ timestamp }) {
   } else {
     await GetDailyHistory1();
     channelCapacity = await getChannelCapacity(timestamp - 86400)
+    // amboss fallback
+    if (channelCapacity == null) {
+      await GetAmbossHistory();
+      channelCapacity = await getChannelCapacity(timestamp - 86400)
+    }
   }
 
   // if none of our scrape targets worked then throw an error
